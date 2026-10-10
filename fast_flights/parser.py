@@ -44,6 +44,13 @@ def _parse_time(value: list[int | None] | None) -> tuple[int, int]:
     return (padded[0] or 0, padded[1] or 0)
 
 
+def _flight_number(entry: list | None) -> str:
+    """Format a '[code, number, ...]' carrier entry as 'XX 123'"""
+    if not entry or len(entry) < 2 or not entry[0] or not entry[1]:
+        return ""
+    return f"{entry[0]} {entry[1]}"
+
+
 # Data discovery by @kftang, huge shout out!
 def parse_js(js: str):
     data = js.split("data:", 1)[1].rsplit(",", 1)[0]
@@ -101,6 +108,20 @@ def parse_js(js: str):
 
             duration = single_flight[11]
 
+            flight_number = _flight_number(
+                single_flight[22] if len(single_flight) > 22 else None
+            )
+
+            codeshares = [
+                num
+                for entry in (
+                    single_flight[15]
+                    if len(single_flight) > 15 and single_flight[15]
+                    else []
+                )
+                if (num := _flight_number(entry))
+            ]
+
             sg_flights.append(
                 SingleFlight(
                     from_airport=from_airport,
@@ -109,6 +130,8 @@ def parse_js(js: str):
                     arrival=arrival,
                     duration=duration,
                     plane_type=plane_type,
+                    flight_number=flight_number,
+                    codeshares=codeshares,
                 )
             )
 

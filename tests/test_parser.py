@@ -44,16 +44,30 @@ class CapturedResponseTests(unittest.TestCase):
                     self.assertEqual(len(value.time), 2)
                     self.assertIsInstance(value.date, tuple)
                     self.assertEqual(len(value.date), 3)
+                self.assertIsInstance(segment.flight_number, str)
+                self.assertIsInstance(segment.codeshares, list)
+
+    def test_flight_numbers_and_codeshares(self) -> None:
+        first, second = self.flights
+
+        self.assertEqual(first.flights[0].flight_number, "LJ 734")
+        self.assertEqual(first.flights[0].codeshares, ["KE 5760"])
+        self.assertEqual(first.flights[1].flight_number, "LJ 201")
+        self.assertEqual(first.flights[1].codeshares, ["KE 5741"])
+        self.assertEqual(second.flights[0].flight_number, "TR 874")
+        self.assertEqual(second.flights[0].codeshares, [])
 
 
 def parse_time(value) -> tuple[int, int]:
     """Parse a payload carrying a single segment with the given departure."""
-    segment = [None] * 22
+    segment = [None] * 23
     segment[3], segment[4] = "TPE", "Taiwan Taoyuan International Airport"
     segment[5], segment[6] = "Narita International Airport", "NRT"
     segment[8], segment[10] = value, [13, 5]
     segment[11], segment[17] = 205, "Airbus A350"
+    segment[15] = None
     segment[20] = segment[21] = [2026, 9, 1]
+    segment[22] = ["XX", "100", None, "Test Airline"]
 
     flight = [None] * 23
     flight[0], flight[1], flight[2] = "nonstop", ["Test Airline"], [segment]

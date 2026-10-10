@@ -44,6 +44,10 @@ class SingleFlight:
 
     plane_type: str
 
+    flight_number: str
+
+    codeshares: list[str]
+
 
 @dataclass
 class CarbonEmission:

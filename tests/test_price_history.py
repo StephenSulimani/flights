@@ -47,17 +47,18 @@ class BookingTfsTests(unittest.TestCase):
 
 
 class PriceInsightsFixtureTests(unittest.TestCase):
-    def setUp(self) -> None:
+    def _payload(self, block: list) -> list:
+        payload: list = [None] * 6
+        payload[5] = block
+        return payload
+
+    def test_parses_typical_band_and_history(self) -> None:
         fixture = json.loads(
             (FIXTURES / "atl_lga_price_insights.json").read_text()
         )
-        self.block = fixture["price_insights"]
-
-    def test_parses_typical_band_and_history(self) -> None:
-        # Minimal ds:1 envelope: insights live at index 5.
-        payload: list = [None] * 6
-        payload[5] = self.block
-        insights = parse_price_insights_payload(payload)
+        insights = parse_price_insights_payload(
+            self._payload(fixture["price_insights"])
+        )
 
         self.assertEqual(insights.lowest_price, 102)
         self.assertEqual(insights.typical_price_range, (30, 140))
@@ -70,16 +71,44 @@ class PriceInsightsFixtureTests(unittest.TestCase):
         self.assertEqual(insights.price_history[-1].iso_date, "2026-10-10")
         self.assertEqual(insights.price_history[-1].price, 102)
 
-    def test_price_level_high_when_above_band(self) -> None:
-        block = list(self.block)
-        block[1] = [None, 200]
-        payload: list = [None] * 6
-        payload[5] = block
-        self.assertEqual(parse_price_insights_payload(payload).price_level, "high")
+    def test_price_level_uses_flight_price_when_provided(self) -> None:
+        fixture = json.loads(
+            (FIXTURES / "atl_lga_price_insights.json").read_text()
+        )
+        high = parse_price_insights_payload(
+            self._payload(fixture["price_insights"]),
+            flight_price=200,
+        )
+        low = parse_price_insights_payload(
+            self._payload(fixture["price_insights"]),
+            flight_price=20,
+        )
+        self.assertEqual(high.price_level, "high")
+        self.assertEqual(high.flight_price, 200)
+        self.assertEqual(low.price_level, "low")
+        self.assertEqual(low.flight_price, 20)
 
-    def test_price_level_low_when_below_band(self) -> None:
-        block = list(self.block)
-        block[1] = [None, 20]
-        payload: list = [None] * 6
-        payload[5] = block
-        self.assertEqual(parse_price_insights_payload(payload).price_level, "low")
+    def test_airline_filtered_histories_differ(self) -> None:
+        f9 = json.loads(
+            (FIXTURES / "atl_lax_f9_price_insights.json").read_text()
+        )["price_insights"]
+        dl = json.loads(
+            (FIXTURES / "atl_lax_dl_price_insights.json").read_text()
+        )["price_insights"]
+
+        f9_insights = parse_price_insights_payload(self._payload(f9))
+        dl_insights = parse_price_insights_payload(self._payload(dl))
+
+        self.assertNotEqual(
+            f9_insights.typical_price_range,
+            dl_insights.typical_price_range,
+        )
+        self.assertNotEqual(
+            [p.price for p in f9_insights.price_history],
+            [p.price for p in dl_insights.price_history],
+        )
+        # Frontier peer band is below Delta's (ULCC vs legacy).
+        self.assertLess(
+            f9_insights.typical_price_range[1],
+            dl_insights.typical_price_range[0],
+        )

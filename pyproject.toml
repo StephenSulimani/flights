@@ -21,7 +21,7 @@ requires-python = ">=3.10"
 dependencies = [
   "build>=1.6.1",
   "primp",
-  "protobuf>=5.27.0",
+  "protobuf>=7.35.1",
   "selectolax",
   "typing-extensions>=4.16.0",
 ]

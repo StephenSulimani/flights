@@ -1,3 +1,4 @@
+import re
 import typing
 from base64 import b64encode
 from dataclasses import dataclass
@@ -14,9 +15,37 @@ from .pb.flights_pb2 import (
     Info,
     Passenger,
     Seat,
+    SelectedFlight,
     Trip,
 )
 from .types import Currency, Language, SeatType, TripType
+
+_AIRLINE_RE = re.compile(r"^[A-Z0-9]{1,3}$")
+_NUMBER_RE = re.compile(r"^[0-9]{1,4}[A-Z]?$")
+
+
+def parse_flight_number(flight_number: str) -> tuple[str, str]:
+    """Split ``'F9 3288'`` / ``'F93288'`` into ``('F9', '3288')``."""
+    cleaned = flight_number.strip().upper().replace("-", " ")
+    parts = cleaned.split()
+    if len(parts) == 2 and _AIRLINE_RE.fullmatch(parts[0]) and _NUMBER_RE.fullmatch(
+        parts[1]
+    ):
+        return parts[0], parts[1]
+
+    compact = cleaned.replace(" ", "")
+    # Prefer 2-character IATA codes so ``F93288`` → F9/3288, not F93/288.
+    for width in (2, 3, 1):
+        match = re.fullmatch(
+            rf"([A-Z0-9]{{{width}}})([0-9]{{1,4}}[A-Z]?)",
+            compact,
+        )
+        if match:
+            return match.group(1), match.group(2)
+
+    raise ValueError(
+        f"invalid flight number {flight_number!r}; expected e.g. 'F9 3288'"
+    )
 
 
 @dataclass
@@ -128,6 +157,8 @@ class FlightQuery:
     min_layover_minutes: int | None = None
     max_layover_minutes: int | None = None
     less_emissions_only: bool = False
+    flight_number: str | None = None
+    """Optional pinned flight (e.g. ``'F9 3288'``) for booking-style ``tfs``."""
 
     def pb(self) -> FlightData:
         if isinstance(self.date, str):
@@ -135,8 +166,20 @@ class FlightQuery:
         else:
             date = self.date.strftime("%Y-%m-%d")
 
+        selected = None
+        if self.flight_number:
+            airline, number = parse_flight_number(self.flight_number)
+            selected = SelectedFlight(
+                from_airport=self.from_airport,
+                date=date,
+                to_airport=self.to_airport,
+                airline=airline,
+                flight_number=number,
+            )
+
         return FlightData(
             date=date,
+            selected_flight=selected,
             from_airport=Airport(airport=self.from_airport),
             to_airport=Airport(airport=self.to_airport),
             max_stops=self.max_stops,

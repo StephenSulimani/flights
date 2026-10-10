@@ -260,7 +260,7 @@ requires-dist = [
     { name = "build", specifier = ">=1.6.1" },
     { name = "playwright", marker = "extra == 'local'" },
     { name = "primp" },
-    { name = "protobuf", specifier = ">=5.27.0" },
+    { name = "protobuf", specifier = ">=7.35.1" },
     { name = "selectolax" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]

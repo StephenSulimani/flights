@@ -4,8 +4,18 @@ message Airport {
   string airport = 2;
 }
 
+// Pinned leg on a booking-style `tfs` (airline + flight number).
+message SelectedFlight {
+  string from_airport = 1;
+  string date = 2;
+  string to_airport = 3;
+  string airline = 5;
+  string flight_number = 6;
+}
+
 message FlightData {
   string date = 2;
+  SelectedFlight selected_flight = 4;
   Airport from_airport = 13;
   Airport to_airport = 14;
   optional int32 max_stops = 5;

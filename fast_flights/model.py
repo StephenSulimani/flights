@@ -66,3 +66,35 @@ class Flights:
     airlines: list[str]
     flights: list[SingleFlight]
     carbon: CarbonEmission
+
+
+@dataclass
+class PriceHistoryPoint:
+    """One point on Google Flights' price-history graph."""
+
+    price: int
+    iso_date: str
+    """Calendar date for this point. Format: ``YYYY-MM-DD`` (UTC)."""
+
+
+@dataclass
+class PriceInsights:
+    """Price intelligence for a search (typical band + history graph)."""
+
+    lowest_price: int | None
+    """Lowest fare among returned flights for the search."""
+
+    price_level: Literal["low", "typical", "high", ""]
+    """Where ``lowest_price`` sits relative to ``typical_price_range``."""
+
+    typical_price_range: tuple[int, int] | None
+    """``(low, high)`` band Google labels as typical for similar trips."""
+
+    price_history: list[PriceHistoryPoint]
+    """Series plotted as “Price history for these flights”."""
+
+    estimated_savings: int | None = None
+    """Signed delta vs a typical fare when Google provides one."""
+
+    destination_city: str | None = None
+    """City name used in the insights copy, when present."""
